@@ -1,0 +1,6 @@
+vendor/
+models/
+*.gguf
+characters/.generated-*.txt
+avatars/*
+!avatars/*.txt
