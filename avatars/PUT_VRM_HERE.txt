@@ -1,0 +1,40 @@
+Drop your companion 3D avatar here as this exact filename:
+
+  avatars/character.vrm
+
+Use an original or licensed adult (18+) VRM. Do not scrape game rips or unlicensed dumps.
+
+Required:
+- Format: VRM 1.0 (preferred) or VRM 0.x. Not a .vroid project file.
+- Humanoid armature VRoid / UniVRM can export.
+- Adult proportions only (18+).
+- Blendshapes / visemes if you want expressions and later lip-sync
+  (A, I, U, E, O, blink, happy, angry, sad, look-up/down if possible).
+- Spring bones on hair/skirt are optional; Utsuwa already runs that physics.
+- Keep the file under ~80 MB.
+
+How to get one:
+
+1. VRoid Studio (fastest)
+   - New character, adult body.
+   - File > Export as VRM (1.00).
+   - Save as avatars/character.vrm
+
+2. Blender + UniVRM
+   - Build or retarget a humanoid mesh, then export VRM 1.0.
+
+3. Until you have a file
+   - Run scripts\07-utsuwa-ui.ps1 anyway. Utsuwa starts.
+   - Pick a bundled sample or Settings > Character > Add Custom and load any .vrm.
+
+After you drop avatars/character.vrm, run scripts\07-utsuwa-ui.ps1 so it copies into
+vendor/utsuwa/static/models/character.vrm.
+
+Optional same-folder extras (not required):
+  avatars/idle.vrma
+  avatars/talking.vrma
+  avatars/sit.vrma     (workshop overlay will prefer this if you later copy it
+                        to vendor/utsuwa/static/animations/sit.vrma)
+
+Until sit.vrma exists, the overlay workshop uses a rest idle and a waist-up
+camera so the avatar reads seated at the bench.
