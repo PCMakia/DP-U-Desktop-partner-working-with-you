@@ -36,6 +36,7 @@ function Invoke-Pnpm {
 }
 
 Set-Location $utsuwa
+$env:ALLOW_LOCAL_PROVIDER_HOSTS = "true"
 if (-not (Test-Path "node_modules")) {
     Write-Host "Installing Utsuwa dependencies (first run)..."
     $code = Invoke-Pnpm install
