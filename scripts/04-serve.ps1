@@ -21,7 +21,11 @@ if (-not (Test-Path $gguf)) {
 Set-HighPerformanceGpu $server
 
 $sysFile = & (Join-Path $PSScriptRoot "render-persona.ps1") -Character $Character
-if ($LASTEXITCODE -ne 0 -or -not $sysFile) { throw "persona render failed" }
+if ($sysFile -is [array]) { $sysFile = $sysFile[-1] }
+$sysFile = [string]$sysFile
+if (-not (Test-Path -LiteralPath $sysFile)) {
+    throw "persona render failed (expected characters\.generated-$Character.txt)"
+}
 
 $llamaArgs = @(
     "-m", $gguf
