@@ -27,7 +27,7 @@ if (-not (Test-Path -LiteralPath $sysFile)) {
 
 $llamaArgs = @(
     "-m", $gguf
-    "--color"
+    "--color", "on"
     "-c", "$Ctx"
     "-n", "1024"
     "--system-prompt-file", $sysFile
