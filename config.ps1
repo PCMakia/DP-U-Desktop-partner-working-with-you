@@ -86,8 +86,6 @@ function Set-LlamaRuntimeEnv {
     $env:CUDA_PATH_V12_8 = $CudaRoot
     $env:CUDA_VISIBLE_DEVICES = "0"
     $env:CUDA_MODULE_LOADING = "LAZY"
-    $env:HF_HUB_OFFLINE = "1"
-    $env:TRANSFORMERS_OFFLINE = "1"
     $cudaBin = Join-Path $CudaRoot "bin"
     if (-not (($env:PATH -split ";") -contains $cudaBin)) {
         $env:PATH = "$cudaBin;$env:PATH"
