@@ -3,3 +3,6 @@ models/
 *.gguf
 characters/.generated-*.txt
 avatars/*.vrm
+.env
+data/memory/
+discord/node_modules/
