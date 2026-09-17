@@ -28,7 +28,7 @@ $llamaArgs = @(
     "--host", "127.0.0.1"
     "--port", "$Port"
     "-c", "$Ctx"
-    "-n", "1024"
+    "-n", "256"
 )
 
 if (-not $NoSystemPrompt) {
