@@ -137,6 +137,38 @@ export function stripAsteriskActions(text: string): string {
 		.trim();
 }
 
+const TRANSCRIPT_CUT_RE =
+	/\n[ \t]*(?:Them|They|You|User|Human|Assistant|Narrator|System|Yue|User)[ \t]*:/i;
+
+export function clipYueReply(text: string, opts?: { allowAction?: boolean }): string {
+	let t = String(text || '').replace(/```[\s\S]*$/g, '').trim();
+	t = t.replace(/^(?:Mira|You)[ \t]*:[ \t]*/i, '');
+	const lineCut = t.search(TRANSCRIPT_CUT_RE);
+	if (lineCut >= 0) t = t.slice(0, lineCut);
+	const midCut = t.search(/\s+(?:Them|They|You|User)[ \t]*:/);
+	if (midCut >= 0) t = t.slice(0, midCut);
+
+	const allowAction = opts?.allowAction === true;
+	const action = allowAction ? t.match(/\*[^*]+\*/)?.[0] : undefined;
+	const spokenLines = stripAsteriskActions(t)
+		.split(/\n+/)
+		.map((s) => s.trim())
+		.filter((s) => s.length > 1);
+	const kept = spokenLines
+		.slice(0, 2)
+		.join(' ')
+		.replace(/[ \t]{2,}/g, ' ')
+		.trim();
+	const words = kept.split(/\s+/).filter(Boolean);
+	const spoken = words.slice(0, 40).join(' ');
+	if (spoken && action) return `${spoken} ${action}`.trim();
+	return spoken || (action ? action.replace(/\*/g, '').trim() : '');
+}
+
+export function looksLikeSimulatedFuture(text: string): boolean {
+	return /(?:^|\n)\s*(?:Them|They|You|User)\s*:/.test(String(text || ''));
+}
+
 export const YUE_VOICE_LOCK = `VOICE LOCK (overrides earlier length/helpfulness instructions):
 You are Mira. Quiet. Few words. Silence is allowed.
 Hard cap: at most two short spoken sentences, under 40 spoken words.

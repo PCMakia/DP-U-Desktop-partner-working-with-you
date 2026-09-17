@@ -7,7 +7,8 @@ import {
 	assertWrite,
 	canonicalizePersonKey,
 	folderNameForKey,
-	parseMemoryKey
+	parseMemoryKey,
+	clipYueReply
 } from './keys.mjs';
 
 function emptyPerson(memoryKey, displayName, isOwner) {
@@ -53,15 +54,31 @@ export function loadIdentity() {
 	return { ...DEFAULT_IDENTITY, ...readJson(file, DEFAULT_IDENTITY) };
 }
 
+function savePerson(root, person) {
+	sanitizePerson(person);
+	writeJson(personPath(root, person.meta.memoryKey), person);
+}
+
+function sanitizePerson(person) {
+	let changed = false;
+	const allowAction = person.meta.isOwner;
+	person.turns = person.turns.map((turn) => {
+		if (turn.role !== 'assistant') return turn;
+		const next = clipYueReply(turn.content, { allowAction }) || '...Mnh.';
+		if (next === turn.content) return turn;
+		changed = true;
+		return { ...turn, content: next };
+	});
+	return changed;
+}
+
 function loadPerson(root, memoryKey, identity) {
 	const key = canonicalizePersonKey(memoryKey, identity);
 	parseMemoryKey(key);
 	const isOwner = key === identity.ownerMemoryKey;
-	return readJson(personPath(root, key), emptyPerson(key, isOwner ? identity.ownerName : 'stranger', isOwner));
-}
-
-function savePerson(root, person) {
-	writeJson(personPath(root, person.meta.memoryKey), person);
+	const person = readJson(personPath(root, key), emptyPerson(key, isOwner ? identity.ownerName : 'stranger', isOwner));
+	if (sanitizePerson(person)) savePerson(root, person);
+	return person;
 }
 
 export function loadContextForSpeaker(actorPersonKey, opts = {}) {
@@ -170,18 +187,27 @@ export function buildSpeakerPromptBlock(input) {
 			: `Speaker is an unrecognized stranger (${input.displayName}). ${input.turnCount} prior user turns. You do not know them. They are not ${input.ownerName}. Do not invent a bond. Spoken words only. No *asterisk* actions.`;
 	const factLines = (input.facts || []).map((f) => `- ${f.content}`).join('\n');
 	const turnLines = (input.turns || [])
-		.map((t) => `${t.role === 'user' ? 'Them' : 'You'}: ${t.content}`)
+		.map((t) => {
+			const content =
+				t.role === 'assistant' ? clipYueReply(t.content, { allowAction: input.isOwner }) : t.content;
+			return t.role === 'user' ? `[user] ${content}` : `[char] ${content}`;
+		})
 		.join('\n');
 	return `<speaker>
 ${who}
 Memory key for this turn is private. Do not use any other person's memories.
 </speaker>
 
-<person_memory>
+<what_happened>
 Facts about THIS speaker only:
 ${factLines || '(none)'}
 
-Recent turns with THIS speaker only:
+Prior turns — what already happened (past only):
 ${turnLines || '(none)'}
-</person_memory>`;
+</what_happened>
+
+<now>
+The latest user message is the present. One spoken reply from Mira. Then stop.
+You may hold an unspoken expectation of what might happen next. Do not write that future. Do not invent the user's next lines.
+</now>`;
 }

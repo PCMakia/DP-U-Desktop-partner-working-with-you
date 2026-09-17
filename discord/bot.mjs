@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_IDENTITY, YUE_VOICE_LOCK, speakerFromDiscord, stripAsteriskActions } from '../src/memory/keys.mjs';
+import { DEFAULT_IDENTITY, YUE_VOICE_LOCK, clipYueReply, speakerFromDiscord } from '../src/memory/keys.mjs';
 import {
 	appendTurn,
 	buildSpeakerPromptBlock,
@@ -45,7 +45,8 @@ async function askLlama(system, user) {
 		body: JSON.stringify({
 			model: 'eclipse',
 			temperature: 0.7,
-			max_tokens: 256,
+			max_tokens: 96,
+			stop: ['\nThem:', '\nThey:', '\nYou:', '\nUser:', '\n[user]', '\n[char]', '\nUser:'],
 			messages: [
 				{ role: 'system', content: system },
 				{ role: 'user', content: user }
@@ -115,10 +116,7 @@ client.on('messageCreate', async (message) => {
 		].join('\n\n');
 
 		const raw = await askLlama(system, message.content.replace(/<@!?(\d+)>/g, '').trim() || '...');
-		let reply = stripJsonFence(raw) || '...Mnh.';
-		if (!speaker.isOwner) {
-			reply = stripAsteriskActions(reply) || '...Mnh.';
-		}
+		const reply = clipYueReply(stripJsonFence(raw), { allowAction: speaker.isOwner }) || '...Mnh.';
 		appendTurn({
 			actorPersonKey: speaker.memoryKey,
 			role: 'user',

@@ -79,3 +79,34 @@ test('listPersons includes every speaker file and persists Discord display names
 	assert.equal(kai?.factCount, 0);
 	assert.equal(kai?.turnCount, 1);
 });
+
+test('prunes simulated-future assistant turns down to what actually happened', () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'alice-mem-'));
+	const identity = {
+		characterKey: 'character/example',
+		ownerMemoryKey: OWNER_PERSON_KEY,
+		ownerName: 'User',
+		ownerDiscordId: '',
+		strangerRecognizeAfterTurns: 8
+	};
+	appendTurn({
+		actorPersonKey: OWNER_PERSON_KEY,
+		role: 'user',
+		content: 'let get some breakfast',
+		root,
+		identity
+	});
+	appendTurn({
+		actorPersonKey: OWNER_PERSON_KEY,
+		role: 'assistant',
+		content:
+			'Mira: ...Mnh.\n\n*She nods.* ...Food.\nThem: Okie dokie!\nYou: *He smiles.* ...Take your time.',
+		root,
+		identity
+	});
+	const ctx = loadContextForSpeaker(OWNER_PERSON_KEY, { root, identity });
+	const reply = ctx.turns.find((t) => t.role === 'assistant')?.content || '';
+	assert.equal(reply.includes('Okie dokie'), false);
+	assert.equal(reply.includes('Them:'), false);
+	assert.ok(reply.includes('...Mnh.'));
+});

@@ -11,7 +11,9 @@ import {
 	discordPersonKey,
 	readableKeys,
 	speakerFromDiscord,
-	stripAsteriskActions
+	stripAsteriskActions,
+	clipYueReply,
+	looksLikeSimulatedFuture
 } from './keys.ts';
 
 const identity = {
@@ -42,6 +44,23 @@ test('other Discord ids stay on their own person key', () => {
 test('strips asterisk actions for stranger-facing replies', () => {
 	assert.equal(stripAsteriskActions('...Mira. *A cold glance.* ...State your purpose.'), '...Mira. ...State your purpose.');
 	assert.equal(stripAsteriskActions('*She looks away.*'), '');
+});
+
+test('clips runaway Them/You scene continuations to one short reply', () => {
+	const raw = `Mira: ...Mnh.
+
+*She nods softly, her crimson eyes meeting yours with quiet affection.* ...Food. *Mira rises from the bed.*
+
+Them: Okie dokie!
+You: *He smiles warmly at you.*`;
+	const clipped = clipYueReply(raw, { allowAction: true });
+	assert.equal(clipped.includes('Them:'), false);
+	assert.equal(clipped.includes('Okie dokie'), false);
+	assert.equal(clipped.includes('Mira:'), false);
+	assert.ok(clipped.startsWith('...Mnh.'));
+	assert.ok((clipped.match(/\*/g) || []).length <= 2);
+	assert.equal(looksLikeSimulatedFuture(raw), true);
+	assert.equal(looksLikeSimulatedFuture('...Mnh. Sit.'), false);
 });
 
 test('a person can read character + self and nothing else', () => {
