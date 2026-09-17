@@ -1,0 +1,7 @@
+{
+  "characterKey": "character/example",
+  "ownerMemoryKey": "person/owner",
+  "ownerName": "User",
+  "ownerDiscordId": "",
+  "strangerRecognizeAfterTurns": 8
+}
