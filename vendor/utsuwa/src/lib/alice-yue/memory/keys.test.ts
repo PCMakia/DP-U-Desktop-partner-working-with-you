@@ -10,7 +10,8 @@ import {
 	canonicalizePersonKey,
 	discordPersonKey,
 	readableKeys,
-	speakerFromDiscord
+	speakerFromDiscord,
+	stripAsteriskActions
 } from './keys.ts';
 
 const identity = {
@@ -36,6 +37,11 @@ test('other Discord ids stay on their own person key', () => {
 	assert.equal(speaker.memoryKey, 'person/discord:222222222222222222');
 	assert.equal(speaker.isOwner, false);
 	assert.equal(speaker.displayName, 'stranger');
+});
+
+test('strips asterisk actions for stranger-facing replies', () => {
+	assert.equal(stripAsteriskActions('...Mira. *A cold glance.* ...State your purpose.'), '...Mira. ...State your purpose.');
+	assert.equal(stripAsteriskActions('*She looks away.*'), '');
 });
 
 test('a person can read character + self and nothing else', () => {

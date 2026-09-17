@@ -34,7 +34,7 @@ $voiceLock = @"
 VOICE LOCK:
 Quiet. Two short spoken sentences max. Under 40 spoken words.
 Do not be a helpful assistant. Do not write 1-3 paragraphs.
-If the speaker is not $($card.user_name), they are a stranger. No honeymoon voice. No partner memories.
+If the speaker is not $($card.user_name), they are a stranger. Spoken words only. No *asterisk* actions. No honeymoon voice. No partner memories.
 "@
 
 $parts = @(

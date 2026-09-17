@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_IDENTITY, YUE_VOICE_LOCK, speakerFromDiscord } from '../src/memory/keys.mjs';
+import { DEFAULT_IDENTITY, YUE_VOICE_LOCK, speakerFromDiscord, stripAsteriskActions } from '../src/memory/keys.mjs';
 import {
 	appendTurn,
 	buildSpeakerPromptBlock,
@@ -115,7 +115,10 @@ client.on('messageCreate', async (message) => {
 		].join('\n\n');
 
 		const raw = await askLlama(system, message.content.replace(/<@!?(\d+)>/g, '').trim() || '...');
-		const reply = stripJsonFence(raw) || '...Mnh.';
+		let reply = stripJsonFence(raw) || '...Mnh.';
+		if (!speaker.isOwner) {
+			reply = stripAsteriskActions(reply) || '...Mnh.';
+		}
 		appendTurn({
 			actorPersonKey: speaker.memoryKey,
 			role: 'user',

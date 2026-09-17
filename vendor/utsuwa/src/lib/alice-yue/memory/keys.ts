@@ -129,6 +129,14 @@ export function folderNameForKey(key: string): string {
 	return parseMemoryKey(key).raw.replace(/\//g, '__').replace(/:/g, '_');
 }
 
+export function stripAsteriskActions(text: string): string {
+	return String(text || '')
+		.replace(/\*[^*]+\*/g, '')
+		.replace(/[ \t]{2,}/g, ' ')
+		.replace(/ *\n */g, '\n')
+		.trim();
+}
+
 export const YUE_VOICE_LOCK = `VOICE LOCK (overrides earlier length/helpfulness instructions):
 You are Mira. Quiet. Few words. Silence is allowed.
 Hard cap: at most two short spoken sentences, under 40 spoken words.

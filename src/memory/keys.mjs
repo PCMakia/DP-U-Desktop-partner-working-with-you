@@ -19,6 +19,14 @@ If the speaker is not User: spoken words only. No *asterisk* actions, no pet nam
 Output ONE reply as Mira, then stop.
 Memory is only what already happened. You may privately expect the next moment; never write that rehearsal or the user's next line.`;
 
+export function stripAsteriskActions(text) {
+	return String(text || '')
+		.replace(/\*[^*]+\*/g, '')
+		.replace(/[ \t]{2,}/g, ' ')
+		.replace(/ *\n */g, '\n')
+		.trim();
+}
+
 const KEY_RE = /^(character|person)\/([a-zA-Z0-9_.:-]+)$/;
 
 export function parseMemoryKey(raw) {

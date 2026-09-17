@@ -258,10 +258,10 @@ export function buildSpeakerPromptBlock(input: {
 	turns: StoredTurn[];
 }): string {
 	const who = input.isOwner
-		? `Speaker is ${input.ownerName} (owner). This is your bound partner. You may use owner memories.`
+		? `Speaker is ${input.ownerName} (owner). This is your bound partner. You may use owner memories. A small *action* is allowed.`
 		: input.recognized
-			? `Speaker is a known stranger (${input.displayName}). ${input.turnCount} prior user turns. You may recall only THIS person's facts. They are not ${input.ownerName}.`
-			: `Speaker is an unrecognized stranger (${input.displayName}). ${input.turnCount} prior user turns. You do not know them. They are not ${input.ownerName}. Do not invent a bond.`;
+			? `Speaker is a known stranger (${input.displayName}). ${input.turnCount} prior user turns. You may recall only THIS person's facts. They are not ${input.ownerName}. Spoken words only. No *asterisk* actions.`
+			: `Speaker is an unrecognized stranger (${input.displayName}). ${input.turnCount} prior user turns. You do not know them. They are not ${input.ownerName}. Do not invent a bond. Spoken words only. No *asterisk* actions.`;
 
 	const factLines = input.facts.map((f) => `- ${f.content}`).join('\n');
 	const turnLines = input.turns
