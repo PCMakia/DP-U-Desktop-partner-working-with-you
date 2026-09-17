@@ -120,6 +120,7 @@ client.on('messageCreate', async (message) => {
 			actorPersonKey: speaker.memoryKey,
 			role: 'user',
 			content: message.content,
+			displayName: speaker.displayName,
 			root: memoryRoot,
 			identity
 		});
