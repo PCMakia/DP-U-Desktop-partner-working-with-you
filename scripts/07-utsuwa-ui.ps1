@@ -1,5 +1,6 @@
-# Sync persona + optional VRM into Utsuwa, then start the web UI (http://localhost:5173).
-# llama.cpp must already be up: .\scripts\04-serve.ps1 -NoSystemPrompt
+# Sync persona + optional VRM into Utsuwa, then start the web UI only
+# (http://localhost:5173). Does not start llama.cpp or Discord.
+# Optional later: .\scripts\12-wake-brain.ps1   or send a chat (auto-wakes Eclipse)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
@@ -37,6 +38,7 @@ function Invoke-Pnpm {
 
 Set-Location $utsuwa
 $env:ALLOW_LOCAL_PROVIDER_HOSTS = "true"
+$env:ALICE_YUE_ROOT = $root
 if (-not (Test-Path "node_modules")) {
     Write-Host "Installing Utsuwa dependencies (first run)..."
     $code = Invoke-Pnpm install
