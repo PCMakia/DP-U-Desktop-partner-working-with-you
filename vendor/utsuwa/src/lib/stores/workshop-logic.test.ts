@@ -20,7 +20,12 @@ import {
 	NECK_YAW_LIMIT,
 	bodyYawForMark,
 	BODY_YAW_MAX,
-	clampBodyYaw
+	clampBodyYaw,
+	nextWorkshopPose,
+	workshopPoseHoldMs,
+	WORKSHOP_POSE_FIRST_MS,
+	poseLocksBody,
+	yawUpdateForPose
 } from './workshop-logic.ts';
 
 test('workshop defaults to enabled editor look-at', () => {
@@ -142,6 +147,27 @@ test('head takes ±30° before the body turns', () => {
 	assert.equal(headYawFromDesired(-1.2, 0), -NECK_YAW_LIMIT);
 	assert.ok(desiredYawFromNx(-1) < 0.2);
 	assert.ok(desiredYawFromNx(1) <= BODY_YAW_MAX + NECK_YAW_LIMIT + 1e-9);
+});
+
+test('workshop pose cycle never repeats the current id', () => {
+	assert.notEqual(nextWorkshopPose('sit', () => 0), 'sit');
+	assert.notEqual(nextWorkshopPose('leanCheek', () => 0), 'leanCheek');
+	assert.ok(workshopPoseHoldMs(() => 0) >= 90_000);
+	assert.ok(workshopPoseHoldMs(() => 1) <= 241_000);
+	assert.equal(WORKSHOP_POSE_FIRST_MS, 45_000);
+});
+
+test('lean-on-table pose locks body yaw and only turns the head', () => {
+	assert.equal(poseLocksBody('leanCheek'), true);
+	assert.equal(poseLocksBody('sit'), false);
+	assert.equal(poseLocksBody('rest'), true);
+	const locked = yawUpdateForPose(true, NECK_YAW_LIMIT + 0.4, 40, BODY_YAW_MAX);
+	assert.equal(locked.mark, 0);
+	assert.equal(locked.bodyTarget, 0);
+	assert.equal(locked.head, NECK_YAW_LIMIT);
+	const free = yawUpdateForPose(false, NECK_YAW_LIMIT + 0.2, 0, 0);
+	assert.equal(free.mark, 40);
+	assert.ok(free.bodyTarget > 0);
 });
 
 test('cursor outside the overlay still shifts gaze', () => {

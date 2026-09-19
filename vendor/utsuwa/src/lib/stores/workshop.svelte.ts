@@ -6,6 +6,7 @@ import {
 	type PresenceBeat,
 	type Vec3,
 	type WorkshopLookAt,
+	type WorkshopPoseId,
 	type BodyYawMark
 } from './workshop-logic';
 
@@ -18,6 +19,7 @@ function createWorkshopStore() {
 	let lookAt = $state<WorkshopLookAt>(saved.lookAt);
 	let companionAttached = $state(false);
 	let beat = $state<PresenceBeat>('work');
+	let poseId = $state<WorkshopPoseId>('sit');
 	let lookWorld = $state<Vec3>({ ...lookTargetForBeat('work') });
 	let yawMark = $state<BodyYawMark>(0);
 	let bodyYaw = $state(0);
@@ -51,6 +53,10 @@ function createWorkshopStore() {
 
 	function setBeat(next: PresenceBeat) {
 		beat = next;
+	}
+
+	function setPoseId(next: WorkshopPoseId) {
+		poseId = next;
 	}
 
 	function setLookWorld(next: Vec3) {
@@ -103,6 +109,9 @@ function createWorkshopStore() {
 		get beat() {
 			return beat;
 		},
+		get poseId() {
+			return poseId;
+		},
 		get lookWorld() {
 			return lookWorld;
 		},
@@ -128,6 +137,7 @@ function createWorkshopStore() {
 		attachOverlay: attachCompanion,
 		detachOverlay: detachCompanion,
 		setBeat,
+		setPoseId,
 		setLookWorld,
 		setYawMark,
 		setBodyYaw,

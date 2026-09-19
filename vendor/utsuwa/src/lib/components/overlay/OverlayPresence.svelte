@@ -10,20 +10,23 @@
 		cursorToLookTarget,
 		cursorNx,
 		desiredYawFromNx,
-		nextYawMark,
-		headYawFromDesired,
+		yawUpdateForPose,
+		poseLocksBody,
 		headPitchFromNy,
-		bodyYawForMark,
 		clampBodyYaw,
 		smoothLookVec,
 		smoothAngle,
 		shouldPlayReturnBeat,
+		nextWorkshopPose,
+		workshopPoseHoldMs,
+		WORKSHOP_POSE_FIRST_MS,
 		type Vec3
 	} from '$lib/stores/workshop-logic';
 
 	onMount(() => {
 		let cancelled = false;
 		let presenceTimer: ReturnType<typeof setTimeout> | null = null;
+		let poseTimer: ReturnType<typeof setTimeout> | null = null;
 		let beatTimer: ReturnType<typeof setTimeout> | null = null;
 		let lookRaf = 0;
 		let cursorPoll: ReturnType<typeof setTimeout> | null = null;
@@ -48,6 +51,21 @@
 			}, nextPresenceDelayMs());
 		}
 
+		function schedulePose(delayMs?: number) {
+			if (poseTimer) clearTimeout(poseTimer);
+			poseTimer = setTimeout(() => {
+				if (
+					!cancelled &&
+					workshopStore.active &&
+					document.visibilityState === 'visible' &&
+					workshopStore.beat === 'work'
+				) {
+					workshopStore.setPoseId(nextWorkshopPose(workshopStore.poseId));
+				}
+				schedulePose();
+			}, delayMs ?? workshopPoseHoldMs());
+		}
+
 		function onHidden() {
 			workshopStore.markHidden();
 		}
@@ -67,6 +85,7 @@
 		document.addEventListener('visibilitychange', onVisibility);
 
 		schedulePresence();
+		schedulePose(WORKSHOP_POSE_FIRST_MS);
 
 		let pointerX = window.innerWidth * 0.65;
 		let pointerY = window.innerHeight * 0.4;
@@ -129,21 +148,18 @@
 					ny = window.innerHeight > 0 ? (pointerY / window.innerHeight) * 2 - 1 : 0;
 				}
 				const desired = desiredYawFromNx(nx);
-				const mark = nextYawMark(desired, workshopStore.yawMark);
-				workshopStore.setYawMark(mark);
+				const locked = poseLocksBody(workshopStore.poseId);
+				const yaw = yawUpdateForPose(
+					locked,
+					desired,
+					workshopStore.yawMark,
+					workshopStore.bodyYaw
+				);
+				workshopStore.setYawMark(yaw.mark);
 				workshopStore.setBodyYaw(
-					clampBodyYaw(
-						smoothAngle(workshopStore.bodyYaw, bodyYawForMark(mark), dt, 1.15)
-					)
+					clampBodyYaw(smoothAngle(workshopStore.bodyYaw, yaw.bodyTarget, dt, 1.15))
 				);
-				workshopStore.setHeadYaw(
-					smoothAngle(
-						workshopStore.headYaw,
-						headYawFromDesired(desired, workshopStore.bodyYaw),
-						dt,
-						2.6
-					)
-				);
+				workshopStore.setHeadYaw(smoothAngle(workshopStore.headYaw, yaw.head, dt, 2.6));
 				workshopStore.setHeadPitch(
 					smoothAngle(workshopStore.headPitch, headPitchFromNy(ny), dt, 2.4)
 				);
@@ -166,6 +182,7 @@
 		return () => {
 			cancelled = true;
 			if (presenceTimer) clearTimeout(presenceTimer);
+			if (poseTimer) clearTimeout(poseTimer);
 			if (beatTimer) clearTimeout(beatTimer);
 			if (cursorPoll) clearTimeout(cursorPoll);
 			cancelAnimationFrame(lookRaf);

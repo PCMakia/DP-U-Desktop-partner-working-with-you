@@ -4,6 +4,25 @@ export const WORKSHOP_SIT_URL = '/animations/sit.vrma';
 
 export type WorkshopLookAt = 'editor' | 'cursor';
 export type PresenceBeat = 'work' | 'hands' | 'camera';
+export type WorkshopPoseId = 'sit' | 'rest' | 'leanCheek';
+
+export interface WorkshopPoseSpec {
+	id: WorkshopPoseId;
+	idleUrl: string;
+	/** Freeze the clip at this fraction of its duration. */
+	hold: number;
+	/** Root/torso stay planted; only neck and head track the look target. */
+	lockBody: boolean;
+}
+
+export const WORKSHOP_POSES: Record<WorkshopPoseId, WorkshopPoseSpec> = {
+	sit: { id: 'sit', idleUrl: '/animations/idle.vrma', hold: 0.18, lockBody: false },
+	rest: { id: 'rest', idleUrl: '/animations/idle_3.vrma', hold: 0.3, lockBody: true },
+	// Side-on table lean: elbow planted, other hand on the cheek. Body does not yaw.
+	leanCheek: { id: 'leanCheek', idleUrl: '/animations/idle_3.vrma', hold: 0.22, lockBody: true }
+};
+
+export const WORKSHOP_POSE_CYCLE: WorkshopPoseId[] = ['sit', 'rest', 'leanCheek'];
 
 export interface Vec3 {
 	x: number;
@@ -204,6 +223,44 @@ export function nextYawMark(desired: number, current: BodyYawMark): BodyYawMark 
 
 export function headYawFromDesired(desired: number, bodyYaw: number): number {
 	return Math.max(-NECK_YAW_LIMIT, Math.min(NECK_YAW_LIMIT, desired - bodyYaw));
+}
+
+/** First pose change after overlay start. */
+export const WORKSHOP_POSE_FIRST_MS = 45_000;
+
+export function workshopPoseHoldMs(random = Math.random): number {
+	return (90 + random() * 150) * 1000;
+}
+
+export function nextWorkshopPose(current: WorkshopPoseId, random = Math.random): WorkshopPoseId {
+	const others = WORKSHOP_POSE_CYCLE.filter((id) => id !== current);
+	if (others.length === 0) return current;
+	return others[Math.floor(random() * others.length)] ?? current;
+}
+
+export function poseLocksBody(poseId: WorkshopPoseId): boolean {
+	return WORKSHOP_POSES[poseId].lockBody;
+}
+
+/**
+ * Cursor yaw while posed. Locked poses keep the torso at the forge and put
+ * the whole desired glance on the neck/head.
+ */
+export function yawUpdateForPose(
+	lockBody: boolean,
+	desired: number,
+	currentMark: BodyYawMark,
+	currentBodyYaw: number
+): { mark: BodyYawMark; bodyTarget: number; head: number } {
+	if (lockBody) {
+		return { mark: 0, bodyTarget: 0, head: headYawFromDesired(desired, 0) };
+	}
+	const mark = nextYawMark(desired, currentMark);
+	return {
+		mark,
+		bodyTarget: bodyYawForMark(mark),
+		head: headYawFromDesired(desired, currentBodyYaw)
+	};
 }
 
 /** Screen Y is down-positive. Returned pitch is look-up-positive (cursor up → look up). */

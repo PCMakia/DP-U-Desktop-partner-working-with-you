@@ -9,7 +9,12 @@
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { photomodeStore } from '$lib/stores/photomode.svelte';
 	import { workshopStore } from '$lib/stores/workshop.svelte';
-	import { WORKSHOP_IDLE_URLS, workshopBlinkInterval, NECK_YAW_LIMIT, BODY_YAW_MAX, CURSOR_YAW_SIGN, CURSOR_PITCH_SIGN } from '$lib/stores/workshop-logic';
+	import { WORKSHOP_POSES, workshopBlinkInterval, NECK_YAW_LIMIT, BODY_YAW_MAX, CURSOR_YAW_SIGN, CURSOR_PITCH_SIGN } from '$lib/stores/workshop-logic';
+	import {
+		applyBlendedTablePose,
+		stepToward,
+		type PoseQuatRestore
+	} from '$lib/stores/workshop-lean-pose';
 	import { loadPoseAnimation, loadPoseManifest } from '$lib/services/poses';
 	import { pickReaction, stageTier, type TouchZone } from '$lib/engine/photo-reactions';
 	import { characterStore } from '$lib/stores/character.svelte';
@@ -221,7 +226,7 @@
 	}
 
 	function idleUrls(): string[] {
-		if (workshopStore.active) return WORKSHOP_IDLE_URLS;
+		if (workshopStore.active) return [WORKSHOP_POSES[workshopStore.poseId].idleUrl];
 		return vrmStore.idleAnimationUrls;
 	}
 
@@ -246,7 +251,8 @@
 		action.timeScale = 0;
 		const clip = action.getClip();
 		if (clip && clip.duration > 0) {
-			action.time = clip.duration * 0.18;
+			const hold = WORKSHOP_POSES[workshopStore.poseId].hold;
+			action.time = clip.duration * Math.min(Math.max(hold, 0), 0.99);
 		}
 	}
 
@@ -276,6 +282,7 @@
 				if (photomodeStore.active) action.paused = true;
 				if (workshopStore.active) holdWorkshopIdle(action);
 				idleAction = action;
+				if (workshopStore.active) workshopClipUrl = idleUrl;
 
 				// Schedule next animation change
 				scheduleIdleCycle(targetVrm, targetMixer, clip.duration);
@@ -336,6 +343,38 @@
 				console.error('Error loading idle animation:', error);
 			});
 	}
+
+	let workshopClipUrl = '';
+	$effect(() => {
+		const active = workshopStore.active;
+		const poseUrl = WORKSHOP_POSES[workshopStore.poseId].idleUrl;
+		untrack(() => {
+			if (!active || photomodeStore.active) {
+				workshopClipUrl = '';
+				return;
+			}
+			const targetVrm = vrm;
+			const targetMixer = mixer;
+			if (!targetVrm || !targetMixer) return;
+			if (poseUrl === workshopClipUrl) return;
+			workshopClipUrl = poseUrl;
+			loadVrmAnimation(poseUrl)
+				.then((vrmAnimation) => {
+					if (mixer !== targetMixer) return;
+					if (idleAction) idleAction.fadeOut(1.35);
+					const clip = createVRMAnimationClip(vrmAnimation, targetVrm);
+					const action = targetMixer.clipAction(clip);
+					action.setLoop(THREE.LoopRepeat, Infinity);
+					action.reset().fadeIn(1.35).play();
+					holdWorkshopIdle(action);
+					idleAction = action;
+				})
+				.catch((error) => {
+					console.error('Error loading workshop pose idle:', error);
+					workshopClipUrl = '';
+				});
+		});
+	});
 
 	// Load the talking animation clip (called once after model loads)
 	function loadTalkingAnimation(targetVrm: VRM, targetMixer: THREE.AnimationMixer) {
@@ -936,6 +975,9 @@
 	const workshopHeadDelta = new THREE.Quaternion();
 	const workshopUndoQuat = new THREE.Quaternion();
 	let workshopHeadHasDelta = false;
+	let restOverlay = 0;
+	let leanOverlay = 0;
+	const appliedPoseQuats: PoseQuatRestore[] = [];
 
 	// Update VRM each frame
 	useTask((delta) => {
@@ -957,6 +999,10 @@
 			if (head) head.quaternion.multiply(workshopUndoQuat.copy(workshopHeadDelta).invert());
 			workshopHeadHasDelta = false;
 		}
+		for (const applied of appliedPoseQuats) {
+			applied.bone.quaternion.copy(applied.before);
+		}
+		appliedPoseQuats.length = 0;
 
 		if (workshopStore.active && idleAction && !shouldTalk && !isEmotePlaying && !photomodeStore.active) {
 			holdWorkshopIdle(idleAction);
@@ -968,6 +1014,14 @@
 		const workshopLook = workshopStore.active && !photomodeStore.active;
 		const extra = workshopLook ? Math.max(0, Math.min(BODY_YAW_MAX, workshopStore.bodyYaw)) : 0;
 		vrm.scene.rotation.y = sceneBaseYaw + extra * CURSOR_YAW_SIGN;
+
+		const poseId = workshopStore.poseId;
+		const overlaysLive = workshopLook && !shouldTalk && !isEmotePlaying;
+		restOverlay = stepToward(restOverlay, overlaysLive && poseId === 'rest' ? 1 : 0, delta);
+		leanOverlay = stepToward(leanOverlay, overlaysLive && poseId === 'leanCheek' ? 1 : 0, delta);
+		if (restOverlay + leanOverlay > 0.001) {
+			applyBlendedTablePose(vrm, restOverlay, leanOverlay, appliedPoseQuats);
+		}
 
 		// Tap reactions: decaying additive nudges layered over whatever the
 		// mixer wrote, rendered this frame (so the body sways with the physics
