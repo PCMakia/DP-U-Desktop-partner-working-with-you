@@ -138,7 +138,7 @@ export function stripAsteriskActions(text: string): string {
 }
 
 const TRANSCRIPT_CUT_RE =
-	/\n[ \t]*(?:Them|They|You|User|Human|Assistant|Narrator|System|Yue|User)[ \t]*:/i;
+	/\n[ \t]*(?:Them|They|You|User|Human|Assistant|Narrator|System|Mira)[ \t]*:/i;
 
 export function clipYueReply(text: string, opts?: { allowAction?: boolean }): string {
 	let t = String(text || '').replace(/```[\s\S]*$/g, '').trim();

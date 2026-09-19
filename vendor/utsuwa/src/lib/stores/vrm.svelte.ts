@@ -18,7 +18,7 @@ export interface VrmModel {
 // See static/models/README.md for each model's license.
 const DEFAULT_MODELS: VrmModel[] = [
 	{
-		id: 'yue-placeholder',
+		id: 'character-placeholder',
 		name: 'Mira (drop avatars/character.vrm)',
 		url: '/models/character.vrm',
 		previewUrl: undefined,

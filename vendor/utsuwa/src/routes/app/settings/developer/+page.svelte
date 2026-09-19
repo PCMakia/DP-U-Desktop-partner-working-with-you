@@ -365,7 +365,7 @@
 			<section class="section">
 				<h3>Workshop brain</h3>
 				<p class="hint">
-					Park llama.cpp to free VRAM while Yue sits. Chat auto-wakes Eclipse; Discord stays
+					Park llama.cpp to free VRAM while the overlay sits. Chat auto-wakes Eclipse; Discord stays
 					off unless you start it here. Utsuwa-only: <code>scripts\07-utsuwa-ui.ps1</code>
 				</p>
 				<p class="hint">{brainNote || 'Checking…'}</p>

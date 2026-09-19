@@ -19,7 +19,7 @@ test('people are linked only by explicit mention, never shared phrasing', () => 
 		{
 			memoryKey: OWNER_PERSON_KEY,
 			displayName: 'User',
-			corpus: 'I love you. Waited for Yue.'
+			corpus: 'I love you. Waited for Mira.'
 		},
 		{
 			memoryKey: 'person/discord:222222222222222222',

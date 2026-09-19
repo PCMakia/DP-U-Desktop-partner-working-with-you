@@ -20,7 +20,7 @@ export interface PersonOverview {
 const GENERIC_NAMES = new Set([
 	'stranger',
 	'user',
-	'yue',
+	'mira',
 	'alice',
 	'they',
 	'them',
