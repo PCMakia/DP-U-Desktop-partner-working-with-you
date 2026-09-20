@@ -75,6 +75,7 @@
 			if (shouldPlayReturnBeat(hiddenAt, Date.now(), WORKSHOP_AWAY_MS)) {
 				playBeat('camera');
 			}
+			startCursorPoll();
 		}
 
 		function onVisibility() {
@@ -83,6 +84,8 @@
 		}
 
 		document.addEventListener('visibilitychange', onVisibility);
+		window.addEventListener('focus', startCursorPoll);
+		window.addEventListener('pageshow', startCursorPoll);
 
 		schedulePresence();
 		schedulePose(WORKSHOP_POSE_FIRST_MS);
@@ -97,33 +100,51 @@
 
 		let screenLocal = { x: pointerX, y: pointerY, w: window.innerWidth, h: window.innerHeight };
 		let haveScreenCursor = false;
+		let cursorPollGen = 0;
+		let lastCursorPollAt = 0;
 
-		async function pollScreenCursor() {
+		function startCursorPoll() {
 			if (cancelled || !isTauri()) return;
-			try {
-				const cursor = await getScreenCursor();
-				if (!cursor || cancelled) return;
-				const { getCurrentWindow } = await import('@tauri-apps/api/window');
-				const win = getCurrentWindow();
-				const [origin, size, scale] = await Promise.all([
-					win.outerPosition(),
-					win.outerSize(),
-					win.scaleFactor()
-				]);
-				screenLocal = {
-					x: (cursor.x - origin.x) / scale,
-					y: (cursor.y - origin.y) / scale,
-					w: size.width / scale,
-					h: size.height / scale
-				};
-				haveScreenCursor = true;
-			} catch {
-				// Keep last sample; window mousemove still works when the overlay is focused.
+			cursorPollGen += 1;
+			const gen = cursorPollGen;
+			if (cursorPoll) {
+				clearTimeout(cursorPoll);
+				cursorPoll = null;
 			}
-			if (!cancelled) cursorPoll = window.setTimeout(pollScreenCursor, 32);
+			void pollScreenCursor(gen);
 		}
 
-		if (isTauri()) void pollScreenCursor();
+		async function pollScreenCursor(gen: number) {
+			if (cancelled || gen !== cursorPollGen || !isTauri()) return;
+			lastCursorPollAt = performance.now();
+			try {
+				const cursor = await getScreenCursor();
+				if (cancelled || gen !== cursorPollGen) return;
+				if (cursor) {
+					const { getCurrentWindow } = await import('@tauri-apps/api/window');
+					const win = getCurrentWindow();
+					const [origin, size, scale] = await Promise.all([
+						win.outerPosition(),
+						win.outerSize(),
+						win.scaleFactor()
+					]);
+					if (cancelled || gen !== cursorPollGen) return;
+					screenLocal = {
+						x: (cursor.x - origin.x) / scale,
+						y: (cursor.y - origin.y) / scale,
+						w: size.width / scale,
+						h: size.height / scale
+					};
+					haveScreenCursor = true;
+				}
+			} catch {
+				// Keep last sample; the next tick retries after sleep/resume.
+			}
+			if (cancelled || gen !== cursorPollGen) return;
+			cursorPoll = window.setTimeout(() => void pollScreenCursor(gen), 32);
+		}
+
+		startCursorPoll();
 
 		let current: Vec3 = { ...lookTargetForBeat('work') };
 		let last = performance.now();
@@ -133,6 +154,14 @@
 			const now = performance.now();
 			const dt = Math.min(0.05, (now - last) / 1000);
 			last = now;
+
+			if (
+				isTauri() &&
+				workshopStore.lookAt === 'cursor' &&
+				now - lastCursorPollAt > 1500
+			) {
+				startCursorPoll();
+			}
 
 			let target = lookTargetForBeat(workshopStore.beat);
 			if (workshopStore.active && workshopStore.lookAt === 'cursor' && workshopStore.beat === 'work') {
@@ -187,6 +216,8 @@
 			if (cursorPoll) clearTimeout(cursorPoll);
 			cancelAnimationFrame(lookRaf);
 			window.removeEventListener('mousemove', onPointerMove);
+			window.removeEventListener('focus', startCursorPoll);
+			window.removeEventListener('pageshow', startCursorPoll);
 			document.removeEventListener('visibilitychange', onVisibility);
 		};
 	});
