@@ -5,6 +5,7 @@ export {
 	getWindowPosition,
 	setIgnoreCursorEvents,
 	setAlwaysOnTop,
+	restoreOverlayDesktop,
 	setWindowVisible,
 	startDragging,
 	type WindowPosition,

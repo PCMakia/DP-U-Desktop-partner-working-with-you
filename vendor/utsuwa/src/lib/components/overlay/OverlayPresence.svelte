@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isTauri, getScreenCursor } from '$lib/services/platform';
+	import { isTauri, getScreenCursor, restoreOverlayDesktop } from '$lib/services/platform';
 	import { workshopStore } from '$lib/stores/workshop.svelte';
 	import {
 		WORKSHOP_AWAY_MS,
@@ -76,6 +76,7 @@
 				playBeat('camera');
 			}
 			startCursorPoll();
+			void restoreOverlayDesktop();
 		}
 
 		function onVisibility() {
@@ -83,9 +84,14 @@
 			else onShown();
 		}
 
+		function onWake() {
+			startCursorPoll();
+			void restoreOverlayDesktop();
+		}
+
 		document.addEventListener('visibilitychange', onVisibility);
-		window.addEventListener('focus', startCursorPoll);
-		window.addEventListener('pageshow', startCursorPoll);
+		window.addEventListener('focus', onWake);
+		window.addEventListener('pageshow', onWake);
 
 		schedulePresence();
 		schedulePose(WORKSHOP_POSE_FIRST_MS);
@@ -216,8 +222,8 @@
 			if (cursorPoll) clearTimeout(cursorPoll);
 			cancelAnimationFrame(lookRaf);
 			window.removeEventListener('mousemove', onPointerMove);
-			window.removeEventListener('focus', startCursorPoll);
-			window.removeEventListener('pageshow', startCursorPoll);
+			window.removeEventListener('focus', onWake);
+			window.removeEventListener('pageshow', onWake);
 			document.removeEventListener('visibilitychange', onVisibility);
 		};
 	});

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { initializeHotkeys, onHotkeyEvent, isTauri } from '$lib/services/platform';
+	import { initializeHotkeys, onHotkeyEvent, isTauri, restoreOverlayDesktop } from '$lib/services/platform';
 	import { overlayStore } from '$lib/stores/overlay.svelte';
 	import { sttStore } from '$lib/stores/stt.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -17,6 +17,19 @@
 
 		// Initialize hotkeys with user's configured shortcuts
 		initializeHotkeys(settingsStore.hotkeys);
+
+		function restoreShortcuts() {
+			void initializeHotkeys(settingsStore.hotkeys);
+			void restoreOverlayDesktop();
+		}
+
+		function onVisible() {
+			if (document.visibilityState === 'visible') restoreShortcuts();
+		}
+
+		document.addEventListener('visibilitychange', onVisible);
+		window.addEventListener('focus', restoreShortcuts);
+		window.addEventListener('pageshow', restoreShortcuts);
 
 		// Handle push-to-talk
 		const unsubPTTStart = onHotkeyEvent('ptt:start', () => {
@@ -68,6 +81,20 @@
 			}
 		})();
 
+		let unlistenRestore: (() => void) | undefined;
+		(async () => {
+			try {
+				const { listen } = await import('@tauri-apps/api/event');
+				const unlisten = await listen('overlay-restore-desktop', () => {
+					restoreShortcuts();
+				});
+				if (cancelled) unlisten();
+				else unlistenRestore = unlisten;
+			} catch {
+				// Native restore event is optional; visibility/focus still recover.
+			}
+		})();
+
 		return () => {
 			cancelled = true;
 			unsubPTTStart();
@@ -76,6 +103,10 @@
 			unsubFocus();
 			unsubChrome();
 			unlistenTauri?.();
+			unlistenRestore?.();
+			document.removeEventListener('visibilitychange', onVisible);
+			window.removeEventListener('focus', restoreShortcuts);
+			window.removeEventListener('pageshow', restoreShortcuts);
 		};
 	});
 </script>
