@@ -159,8 +159,8 @@ fn alice_yue_brain_status() -> Result<bool, String> {
 
 #[tauri::command]
 fn alice_yue_brain(action: String, discord: Option<bool>) -> Result<String, String> {
-    let root = std::env::var("ALICE_YUE_ROOT").map_err(|_| {
-        "ALICE_YUE_ROOT is not set. Start Utsuwa with scripts/07-utsuwa-ui.ps1".to_string()
+    let root = std::env::var("DPU_ROOT").map_err(|_| {
+        "DPU_ROOT is not set. Start Utsuwa with scripts/07-utsuwa-ui.ps1".to_string()
     })?;
     let script = match action.as_str() {
         "park" => "11-park-brain.ps1",
@@ -181,6 +181,31 @@ fn alice_yue_brain(action: String, discord: Option<bool>) -> Result<String, Stri
     }
     cmd.spawn().map_err(|e| e.to_string())?;
     Ok(action)
+}
+
+fn stop_dpu_stack() {
+    let root = match std::env::var("DPU_ROOT") {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+    let script_path = format!("{}\\scripts\\14-stop-companion.ps1", root);
+    let mut cmd = std::process::Command::new("powershell.exe");
+    cmd.args([
+        "-ExecutionPolicy",
+        "Bypass",
+        "-NoProfile",
+        "-WindowStyle",
+        "Hidden",
+        "-File",
+        &script_path,
+    ]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let _ = cmd.spawn();
 }
 
 #[tauri::command]
@@ -230,6 +255,17 @@ pub fn run() {
             alice_yue_brain,
             alice_yue_brain_status
         ])
+        .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if let Some(overlay) = window.app_handle().get_webview_window("overlay") {
+                    let _ = overlay.close();
+                }
+                stop_dpu_stack();
+            }
+        })
         .setup(|app| {
             let _ = APP_HANDLE.set(app.handle().clone());
             #[cfg(windows)]
