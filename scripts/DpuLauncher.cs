@@ -50,7 +50,7 @@ public class ChooserForm : Form
         Text = "DP&&U";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(360, 210);
+        ClientSize = new Size(380, 248);
         MaximizeBox = false;
         MinimizeBox = false;
         ShowInTaskbar = true;
@@ -61,7 +61,7 @@ public class ChooserForm : Form
         {
             var pic = new PictureBox
             {
-                Location = new Point(16, 10),
+                Location = new Point(16, 12),
                 Size = new Size(48, 48),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Image = Branding.Logo
@@ -73,36 +73,36 @@ public class ChooserForm : Form
         var hint = new Label
         {
             AutoSize = false,
-            Location = new Point(hintLeft, 12),
-            Size = new Size(360 - hintLeft - 16, 32),
+            Location = new Point(hintLeft, 18),
+            Size = new Size(380 - hintLeft - 16, 36),
             Text = "Desktop partner working with you"
         };
 
         uiOnly = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(20, 52),
+            Location = new Point(20, 76),
             Text = "UI only (no llama)"
         };
         uiLlama = new RadioButton
         {
             AutoSize = true,
             Checked = true,
-            Location = new Point(20, 80),
+            Location = new Point(20, 104),
             Text = "UI and llama"
         };
         full = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(20, 108),
+            Location = new Point(20, 132),
             Text = "Full (UI, llama, and Discord)"
         };
 
         var start = new Button
         {
             Text = "Start",
-            Location = new Point(20, 154),
-            Size = new Size(320, 36)
+            Location = new Point(20, 192),
+            Size = new Size(340, 36)
         };
         start.Click += delegate
         {

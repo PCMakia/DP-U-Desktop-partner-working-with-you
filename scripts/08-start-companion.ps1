@@ -98,35 +98,35 @@ function Show-DpuChooser {
     $form.Text = "DP&U"
     $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $form.ClientSize = New-Object System.Drawing.Size(360, 210)
+    $form.ClientSize = New-Object System.Drawing.Size(380, 248)
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
 
     $hint = New-Object System.Windows.Forms.Label
-    $hint.Location = New-Object System.Drawing.Point(16, 12)
-    $hint.Size = New-Object System.Drawing.Size(328, 32)
+    $hint.Location = New-Object System.Drawing.Point(16, 18)
+    $hint.Size = New-Object System.Drawing.Size(348, 36)
     $hint.Text = "Desktop partner working with you"
 
     $uiOnly = New-Object System.Windows.Forms.RadioButton
     $uiOnly.AutoSize = $true
-    $uiOnly.Location = New-Object System.Drawing.Point(20, 52)
+    $uiOnly.Location = New-Object System.Drawing.Point(20, 76)
     $uiOnly.Text = "UI only (no llama)"
 
     $uiLlama = New-Object System.Windows.Forms.RadioButton
     $uiLlama.AutoSize = $true
     $uiLlama.Checked = $true
-    $uiLlama.Location = New-Object System.Drawing.Point(20, 80)
+    $uiLlama.Location = New-Object System.Drawing.Point(20, 104)
     $uiLlama.Text = "UI and llama"
 
     $full = New-Object System.Windows.Forms.RadioButton
     $full.AutoSize = $true
-    $full.Location = New-Object System.Drawing.Point(20, 108)
+    $full.Location = New-Object System.Drawing.Point(20, 132)
     $full.Text = "Full (UI, llama, and Discord)"
 
     $start = New-Object System.Windows.Forms.Button
     $start.Text = "Start"
-    $start.Location = New-Object System.Drawing.Point(20, 154)
-    $start.Size = New-Object System.Drawing.Size(320, 36)
+    $start.Location = New-Object System.Drawing.Point(20, 192)
+    $start.Size = New-Object System.Drawing.Size(340, 36)
     $chosen = @{ Mode = $null }
     $start.Tag = @{ UiOnly = $uiOnly; Full = $full; Form = $form; Chosen = $chosen }
     $start.Add_Click({
