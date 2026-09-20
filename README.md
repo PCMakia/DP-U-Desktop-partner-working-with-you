@@ -10,6 +10,9 @@ Edit a character sheet. Offload Eclipse 12B to your NVIDIA GPU. Talk in the term
 
 This public tree ships an example card (`characters/character.json`, name **Mira**). Replace her with your own character in mind.
 
+![Overlay on the desktop - Yue (Arifureta)](https://github.com/user-attachments/assets/f6abea79-befd-4c85-808a-592037377f41)
+
+
 ## Prerequisites (Windows)
 
 
@@ -66,6 +69,8 @@ Default configure tries `86;89;120` so one binary covers those three.
 
 
 ### 1. Clone this repo
+
+
 
 ### 2. Fetch Utsuwa, then re-apply this repo's overlay
 
