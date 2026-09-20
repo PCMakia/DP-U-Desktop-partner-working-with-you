@@ -1,4 +1,4 @@
-# Shared paths for the ALICE companion stack (Eclipse 12B + character card).
+# Shared paths for the DP&U companion stack (Eclipse 12B + character card).
 # Dot-source from the numbered scripts. Do not run this file by itself.
 
 $ErrorActionPreference = "Stop"

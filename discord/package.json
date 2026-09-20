@@ -1,5 +1,5 @@
 {
-  "name": "alice-companion-discord",
+  "name": "dpu-discord",
   "private": true,
   "type": "module",
   "dependencies": {

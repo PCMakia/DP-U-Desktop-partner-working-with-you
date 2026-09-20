@@ -21,7 +21,7 @@ const GENERIC_NAMES = new Set([
 	'stranger',
 	'user',
 	'mira',
-	'alice',
+	'dpu',
 	'they',
 	'them',
 	'honey',

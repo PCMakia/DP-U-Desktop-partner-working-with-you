@@ -1,12 +1,12 @@
 /**
- * First-run wiring for this ALICE checkout.
+ * First-run wiring for this DP&U checkout.
  * Seeds llama.cpp as the OpenAI-compatible provider and enables chat.
  * Does not overwrite settings the user already saved.
  */
 import { LLAMA_BASE_URL, LLAMA_MODEL_ID } from './persona';
 
-const SEED_KEY = 'alice-yue-wired-v1';
-const VOICE_KEY = 'alice-yue-voice-lock-v1';
+const SEED_KEY = 'dpu-wired-v1';
+const VOICE_KEY = 'dpu-voice-lock-v1';
 
 export function seedAliceYueLocalStack(): void {
 	if (typeof localStorage === 'undefined') return;

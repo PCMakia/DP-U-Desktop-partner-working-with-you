@@ -9,7 +9,7 @@ Set-Location $root
 
 $utsuwa = Join-Path $root "vendor\utsuwa"
 if (-not (Test-Path (Join-Path $utsuwa "package.json"))) {
-    throw "Utsuwa is missing at $utsuwa"
+    throw "Utsuwa not fetched. Run .\scripts\00-fetch-utsuwa.ps1 at the repo root."
 }
 
 & (Join-Path $PSScriptRoot "render-persona.ps1") | Out-Null
@@ -42,7 +42,7 @@ function Invoke-Pnpm {
 
 Set-Location $utsuwa
 $env:ALLOW_LOCAL_PROVIDER_HOSTS = "true"
-$env:ALICE_YUE_ROOT = $root
+$env:DPU_ROOT = $root
 if (-not (Test-Path "node_modules")) {
     $code = Invoke-Pnpm install
     if ($code -ne 0) { throw "pnpm install failed" }
