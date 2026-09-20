@@ -1,121 +1,217 @@
-# One-click companion: llama.cpp + Utsuwa UI + browser.
-# Safe to run if a process is already listening on the same port.
+# Start DP&U: hidden Tauri UI, optional llama.cpp, optional Discord.
+# Double-click DPU.exe / DPU.bat for a chooser. Or:
+#   .\scripts\08-start-companion.ps1 -Mode ui|llama|full
+# Errors print a DPU_TOAST block so the exe can show a small window.
+
+param(
+    [ValidateSet("ui", "llama", "full")]
+    [string]$Mode,
+    [switch]$Silent
+)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root "config.ps1")
 
 $llamaPort = $DefaultPort
-$uiPort = 5173
-$uiUrl = "http://localhost:$uiPort/app"
+$FetchUtsuwa = ".\scripts\00-fetch-utsuwa.ps1"
+$BuildLlama = ".\scripts\01-build-llama.ps1"
+$DownloadGguf = ".\scripts\02-download-gguf.ps1"
+
+function Write-DpuToast([string]$Title, [string]$Command) {
+    [Console]::Error.WriteLine("DPU_TOAST")
+    [Console]::Error.WriteLine($Title)
+    [Console]::Error.WriteLine($Command)
+}
+
+function Show-DpuToast([string]$Title, [string]$Command) {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "DP&U"
+    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $form.ClientSize = New-Object System.Drawing.Size(420, 160)
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    $form.TopMost = $true
+    $box = New-Object System.Windows.Forms.TextBox
+    $box.Multiline = $true
+    $box.ReadOnly = $true
+    $box.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+    $box.Location = New-Object System.Drawing.Point(16, 16)
+    $box.Size = New-Object System.Drawing.Size(388, 90)
+    $box.Text = "$Title`r`n`r`nRun this command at the repo root to fetch:`r`n$Command"
+    $box.BackColor = [System.Drawing.SystemColors]::Window
+    $box.Add_KeyDown({
+        param($sender, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $sender.SelectAll()
+            $e.SuppressKeyPress = $true
+        }
+    })
+    $ok = New-Object System.Windows.Forms.Button
+    $ok.Text = "OK"
+    $ok.Location = New-Object System.Drawing.Point(300, 114)
+    $ok.Size = New-Object System.Drawing.Size(100, 28)
+    $ok.Add_Click({ $form.Close() })
+    $form.AcceptButton = $ok
+    $form.Controls.AddRange(@($box, $ok))
+    $form.Add_Shown({
+        $box.SelectAll()
+        $box.Focus()
+    })
+    [void]$form.ShowDialog()
+}
+
+function Fail-Need([string]$Title, [string]$Command) {
+    Write-DpuToast $Title $Command
+    if (-not $Silent) { Show-DpuToast $Title $Command }
+    exit 2
+}
 
 function Test-LocalPort([int]$Port) {
-    $hosts = @("127.0.0.1", "localhost", "::1")
-    foreach ($name in $hosts) {
-        try {
-            $client = New-Object System.Net.Sockets.TcpClient
-            $client.Connect($name, $Port)
-            $client.Close()
-            return $true
-        } catch { }
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $client.Connect("127.0.0.1", $Port)
+        $client.Close()
+        return $true
+    } catch {
+        return $false
     }
-    foreach ($url in @("http://127.0.0.1:$Port/", "http://localhost:$Port/", "http://[::1]:$Port/")) {
-        try {
-            Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2 | Out-Null
-            return $true
-        } catch { }
-    }
-    return $false
 }
 
 function Wait-LocalPort([int]$Port, [int]$TimeoutSec, [string]$Label) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
-    $started = Get-Date
     while ((Get-Date) -lt $deadline) {
-        if (Test-LocalPort $Port) {
-            Write-Host "$Label is ready."
-            return
-        }
-        $elapsed = [int]((Get-Date) - $started).TotalSeconds
-        Write-Host "`rWaiting for $Label... ${elapsed}s   " -NoNewline
+        if (Test-LocalPort $Port) { return }
         Start-Sleep -Seconds 1
     }
-    Write-Host ""
     throw "$Label did not open port $Port within ${TimeoutSec}s"
 }
 
-function Pause-Launcher([string]$Message) {
-    Write-Host $Message
-    Write-Host "Press Enter to close this window."
-    try {
-        Read-Host | Out-Null
-    } catch {
-        Start-Sleep -Seconds 8
-    }
+function Show-DpuChooser {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "DP&U"
+    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $form.ClientSize = New-Object System.Drawing.Size(360, 210)
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+
+    $hint = New-Object System.Windows.Forms.Label
+    $hint.Location = New-Object System.Drawing.Point(16, 12)
+    $hint.Size = New-Object System.Drawing.Size(328, 32)
+    $hint.Text = "Desktop partner working with you"
+
+    $uiOnly = New-Object System.Windows.Forms.RadioButton
+    $uiOnly.AutoSize = $true
+    $uiOnly.Location = New-Object System.Drawing.Point(20, 52)
+    $uiOnly.Text = "UI only (no llama)"
+
+    $uiLlama = New-Object System.Windows.Forms.RadioButton
+    $uiLlama.AutoSize = $true
+    $uiLlama.Checked = $true
+    $uiLlama.Location = New-Object System.Drawing.Point(20, 80)
+    $uiLlama.Text = "UI and llama"
+
+    $full = New-Object System.Windows.Forms.RadioButton
+    $full.AutoSize = $true
+    $full.Location = New-Object System.Drawing.Point(20, 108)
+    $full.Text = "Full (UI, llama, and Discord)"
+
+    $start = New-Object System.Windows.Forms.Button
+    $start.Text = "Start"
+    $start.Location = New-Object System.Drawing.Point(20, 154)
+    $start.Size = New-Object System.Drawing.Size(320, 36)
+    $chosen = @{ Mode = $null }
+    $start.Tag = @{ UiOnly = $uiOnly; Full = $full; Form = $form; Chosen = $chosen }
+    $start.Add_Click({
+        $t = $this.Tag
+        if ($t.UiOnly.Checked) { $t.Chosen.Mode = "ui" }
+        elseif ($t.Full.Checked) { $t.Chosen.Mode = "full" }
+        else { $t.Chosen.Mode = "llama" }
+        $t.Form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        $t.Form.Close()
+    })
+    $form.AcceptButton = $start
+
+    $form.Controls.AddRange(@($hint, $uiOnly, $uiLlama, $full, $start))
+    [void]$form.ShowDialog()
+    return $chosen.Mode
 }
+
+function Start-HiddenScript {
+    param(
+        [Parameter(Mandatory)][string]$ScriptName,
+        [string[]]$ScriptArgs = @()
+    )
+    $file = Join-Path $PSScriptRoot $ScriptName
+    $argList = @(
+        "-ExecutionPolicy", "Bypass",
+        "-NoProfile",
+        "-WindowStyle", "Hidden",
+        "-File", $file
+    ) + $ScriptArgs
+    Start-Process -FilePath "powershell.exe" -WorkingDirectory $root -WindowStyle Hidden -ArgumentList $argList | Out-Null
+}
+
+if (-not $Mode) {
+    $Mode = Show-DpuChooser
+    if (-not $Mode) { exit 0 }
+}
+
+$wantLlama = $Mode -ne "ui"
+$wantDiscord = $Mode -eq "full"
+$utsuwaPkg = Join-Path $root "vendor\utsuwa\package.json"
 
 try {
-    Write-Host "ALICE launcher"
-    Write-Host "Press Enter to activate Discord after llama.cpp and Utsuwa are up."
-    Write-Host "Type skip then Enter to leave Discord off."
-    $discordAnswer = Read-Host "Discord"
-    $startDiscord = $discordAnswer -notmatch '^(skip|n|no|q)$'
-
-    $serve = Join-Path $PSScriptRoot "04-serve.ps1"
-    $ui = Join-Path $PSScriptRoot "07-utsuwa-ui.ps1"
-    $discord = Join-Path $PSScriptRoot "10-discord.ps1"
-
-    if (Test-LocalPort $llamaPort) {
-        Write-Host "llama.cpp already on 127.0.0.1:$llamaPort"
-    } else {
-        Write-Host "Starting llama.cpp on 127.0.0.1:$llamaPort ..."
-        Start-Process -FilePath "powershell.exe" -WorkingDirectory $root -ArgumentList @(
-            "-NoExit",
-            "-ExecutionPolicy", "Bypass",
-            "-NoProfile",
-            "-File", $serve,
-            "-NoSystemPrompt"
-        )
+    if (-not (Test-Path $utsuwaPkg)) {
+        Fail-Need "Utsuwa not fetched." $FetchUtsuwa
     }
 
-    if (Test-LocalPort $uiPort) {
-        Write-Host "Utsuwa already on $uiUrl"
-    } else {
-        Write-Host "Starting Utsuwa UI ..."
-        Start-Process -FilePath "powershell.exe" -WorkingDirectory $root -ArgumentList @(
-            "-NoExit",
-            "-ExecutionPolicy", "Bypass",
-            "-NoProfile",
-            "-File", $ui
-        )
+    if ($wantLlama) {
+        try {
+            $null = Get-LlamaExe "llama-server.exe"
+        } catch {
+            Fail-Need "llama.cpp is not built." $BuildLlama
+        }
+        $gguf = Get-ModelPath
+        if (-not (Test-Path $gguf)) {
+            Fail-Need "Eclipse GGUF is not downloaded." $DownloadGguf
+        }
+        if (-not (Test-LocalPort $llamaPort)) {
+            Start-HiddenScript -ScriptName "04-serve.ps1" -ScriptArgs @("-NoSystemPrompt")
+        }
     }
 
-    Write-Host "Waiting for llama.cpp (model load can take a minute)..."
-    Wait-LocalPort -Port $llamaPort -TimeoutSec 180 -Label "llama.cpp"
+    Start-HiddenScript -ScriptName "13-utsuwa-desktop.ps1"
 
-    Write-Host "Waiting for Utsuwa..."
-    Wait-LocalPort -Port $uiPort -TimeoutSec 180 -Label "Utsuwa"
+    if ($wantLlama) {
+        try {
+            Wait-LocalPort -Port $llamaPort -TimeoutSec 180 -Label "llama.cpp"
+        } catch {
+            Fail-Need "llama.cpp did not start." $BuildLlama
+        }
+    }
 
-    Write-Host "Opening $uiUrl"
-    Start-Process $uiUrl
-
-    if ($startDiscord) {
+    if ($wantDiscord) {
         $envFile = Join-Path $root ".env"
         if (-not (Test-Path $envFile)) {
-            throw "Discord was requested but .env is missing. Copy .env.example and set DISCORD_BOT_TOKEN and OWNER_DISCORD_ID."
+            Fail-Need "Discord .env is missing." "copy .env.example .env"
         }
-        Write-Host "Starting Discord..."
-        Start-Process -FilePath "powershell.exe" -WorkingDirectory $root -ArgumentList @(
-            "-NoExit",
-            "-ExecutionPolicy", "Bypass",
-            "-NoProfile",
-            "-File", $discord
-        )
+        Start-HiddenScript -ScriptName "10-discord.ps1"
     }
-
-    Pause-Launcher "Ready. You can close this window. Leave llama.cpp, Utsuwa$(if ($startDiscord) { ', and Discord' }) open."
 } catch {
-    Write-Host $_ -ForegroundColor Red
-    Pause-Launcher "Launcher stopped with an error. llama.cpp / Utsuwa windows can stay up if they already started."
+    $text = [string]$_
+    if ($text -notmatch "DPU_TOAST") {
+        Write-DpuToast $text.Trim() $FetchUtsuwa
+        if (-not $Silent) { Show-DpuToast $text.Trim() $FetchUtsuwa }
+    }
     exit 1
 }
+
+exit 0
