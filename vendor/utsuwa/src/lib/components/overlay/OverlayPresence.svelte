@@ -76,7 +76,7 @@
 				playBeat('camera');
 			}
 			startCursorPoll();
-			void restoreOverlayDesktop();
+			if (hiddenAt !== null) void restoreOverlayDesktop();
 		}
 
 		function onVisibility() {
@@ -86,12 +86,16 @@
 
 		function onWake() {
 			startCursorPoll();
-			void restoreOverlayDesktop();
+		}
+
+		function onPageShow(e: PageTransitionEvent) {
+			startCursorPoll();
+			if (e.persisted) void restoreOverlayDesktop();
 		}
 
 		document.addEventListener('visibilitychange', onVisibility);
 		window.addEventListener('focus', onWake);
-		window.addEventListener('pageshow', onWake);
+		window.addEventListener('pageshow', onPageShow);
 
 		schedulePresence();
 		schedulePose(WORKSHOP_POSE_FIRST_MS);
@@ -223,7 +227,7 @@
 			cancelAnimationFrame(lookRaf);
 			window.removeEventListener('mousemove', onPointerMove);
 			window.removeEventListener('focus', onWake);
-			window.removeEventListener('pageshow', onWake);
+			window.removeEventListener('pageshow', onPageShow);
 			document.removeEventListener('visibilitychange', onVisibility);
 		};
 	});

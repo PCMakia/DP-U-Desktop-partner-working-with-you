@@ -273,8 +273,8 @@ fn pin_overlay_topmost(window: &tauri::WebviewWindow) {
 	const SWP_NOSIZE: u32 = 0x0001;
 	const SWP_NOMOVE: u32 = 0x0002;
 	const SWP_NOACTIVATE: u32 = 0x0010;
-	let _ = window.set_always_on_top(false);
-	let _ = window.set_always_on_top(true);
+	// Re-assert TOPMOST only. Toggling always-on-top off/on recreates the
+	// WebView2 swapchain and the VRM snaps to bind pose.
 	if let Ok(hwnd) = window.hwnd() {
 		unsafe {
 			let _ = SetWindowPos(

@@ -23,13 +23,18 @@
 			void restoreOverlayDesktop();
 		}
 
-		function onVisible() {
-			if (document.visibilityState === 'visible') restoreShortcuts();
+		let beenHidden = false;
+		function onVisChange() {
+			if (document.visibilityState === 'hidden') {
+				beenHidden = true;
+				return;
+			}
+			if (!beenHidden) return;
+			beenHidden = false;
+			restoreShortcuts();
 		}
 
-		document.addEventListener('visibilitychange', onVisible);
-		window.addEventListener('focus', restoreShortcuts);
-		window.addEventListener('pageshow', restoreShortcuts);
+		document.addEventListener('visibilitychange', onVisChange);
 
 		// Handle push-to-talk
 		const unsubPTTStart = onHotkeyEvent('ptt:start', () => {
@@ -104,9 +109,7 @@
 			unsubChrome();
 			unlistenTauri?.();
 			unlistenRestore?.();
-			document.removeEventListener('visibilitychange', onVisible);
-			window.removeEventListener('focus', restoreShortcuts);
-			window.removeEventListener('pageshow', restoreShortcuts);
+			document.removeEventListener('visibilitychange', onVisChange);
 		};
 	});
 </script>
